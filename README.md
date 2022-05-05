@@ -19,9 +19,9 @@ This module is small util for converting Telegram sessions  to various formats (
 
 - [x] From telethon\pyrogram SQLite session file
 - [x] From telethon\pyrogram SQLite session stream
-- [-] From tdata
+- [ ] From tdata
 - [x] To telethon client object (Sync\Async)
 - [x] To telethon SQLite session file
-- [-] To pyrogram client object
-- [-] To pyrogram SQLite session file
-- [-] To tdata
+- [ ] To pyrogram client object
+- [ ] To pyrogram SQLite session file
+- [ ] To tdata
