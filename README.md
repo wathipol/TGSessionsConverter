@@ -1,4 +1,4 @@
-<img src="https://cdn4.iconfinder.com/data/icons/socialcones/508/Telegram-256.png" align="right" width="131" />
+<img src="https://cdn4.iconfinder.com/data/icons/social-media-and-logos-12/32/Logo_telegram_Airplane_Air_plane_paper_airplane-33-256.png" align="right" width="131" />
 
 # TGSessionsCoverter
 ![PyPI](https://img.shields.io/pypi/v/TGSessionsCoverter)
