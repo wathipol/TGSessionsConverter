@@ -9,6 +9,11 @@ This module is small util for converting Telegram sessions  to various formats (
 <hr/>
 
 
+## Installation
+```
+$ pip install TGSessionsCoverter
+```
+
 ## Quickstart
 
 ...
