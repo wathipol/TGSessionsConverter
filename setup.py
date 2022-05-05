@@ -13,7 +13,7 @@ requirements = [
 
 setuptools.setup(
     name="TGSessionsCoverter",
-    version="0.0.1",
+    version="0.0.2",
     author="watdev",
     author_email="v.liubachevskyi@gmail.com",
     description="This module is small util for converting Telegram sessions  to various formats (Telethon, Pyrogram, Tdata)",
