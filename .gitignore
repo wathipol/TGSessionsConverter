@@ -1,0 +1,13 @@
+*.session
+*.sessions
+**/*.session
+*.pyc
+*.pyo
+*.env
+test.py
+**/__pycache__/
+*.DS_Store
+**/.DS_Store
+/build
+/dist
+/*.egg-info
