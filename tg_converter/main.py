@@ -2,10 +2,16 @@ from telethon import TelegramClient as AsyncTelethonTelegramClient
 from telethon.sync import TelegramClient as SyncTelethonTelegramClient
 from pyrogram import Client as PyrogramTelegramClient
 from telethon.sessions import MemorySession, SQLiteSession
+from pyrogram.storage import MemoryStorage, FileStorage, Storage
 from telethon.crypto import AuthKey
+from pathlib import Path
 from stream_sqlite import stream_sqlite
 from typing import Union
 import io
+import asyncio
+import base64
+import struct
+import sqlite3
 
 
 class TelegramSession:
@@ -14,9 +20,34 @@ class TelegramSession:
         self._dc_id = dc_id
         self._server_address = server_address
         self._port = port
-        self.api_id = api_id
-        self.api_hash = api_hash
+        self._api_id = api_id
+        self._api_hash = api_hash
 
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = asyncio.get_event_loop()
+
+    @property
+    def api_id(self):
+        if self._api_id is None:
+            raise ValueError("api_id is required for this method")
+        return self._api_id
+
+    @property
+    def api_hash(self):
+        if self._api_hash is None:
+            raise ValueError("api_hash is required for this method")
+        return self._api_hash
+
+    @api_id.setter
+    def api_id(self, value):
+        self._api_id = value
+
+    @api_hash.setter
+    def api_hash(self, value):
+        self._api_hash = value
+    
     @staticmethod
     def from_sqlite_session_file_stream(
             sqlite_session: io.BytesIO, api_id: int, api_hash: str):
@@ -74,7 +105,13 @@ class TelegramSession:
     def from_telethon_or_pyrogram_client(
             client: Union[
                 AsyncTelethonTelegramClient, SyncTelethonTelegramClient, PyrogramTelegramClient]):
-        pass
+        if isinstance(client, [AsyncTelethonTelegramClient, SyncTelethonTelegramClient]):
+            # is Telethon
+            pass
+        elif isinstance(client, PyrogramTelegramClient):
+            pass
+        else:
+            raise TypeError("client must be <telethon.TelegramClient> or <pyrogram.Client> instance")
 
     @staticmethod
     def from_tdata(path_to_folder: str):
@@ -86,8 +123,19 @@ class TelegramSession:
         session.auth_key = AuthKey(data=self._auth_key)
         return session
 
+    def _make_telethon_sqlite_session_storoge(
+            self, id_or_path: str = "telethon", update_table=False, save=False):
+        session_storage = SQLiteSession(id_or_path)
+        session_storage.set_dc(self._dc_id, self._server_address, self._port)
+        session_storage.auth_key = AuthKey(data=self._auth_key)
+        if update_table:
+            session_storage._update_session_table()
+        if save:
+            session_storage.save()
+        return session_storage
+
     def make_telethon(
-            self, session=None, sync=False) -> Union[
+            self, session=None, sync=False, **make_args) -> Union[
                 AsyncTelethonTelegramClient, SyncTelethonTelegramClient]:
         """
             Create <telethon.TelegramClient> client object with current session data
@@ -96,19 +144,81 @@ class TelegramSession:
             session = self._make_telethon_memory_session_storage()
         THClientMake = AsyncTelethonTelegramClient
         if sync:
-            THClientMake = SyncTelegramClient
-        return THClientMake(session, self.api_id, self.api_hash)
+            THClientMake = SyncTelethonTelegramClient
+        return THClientMake(session, self.api_id, self.api_hash, **make_args)
 
-    def make_pyrogram(self, session, sync=False):
-        pass
+    async def make_pyrogram(self, session_id: str = "pyrogram", **make_args):
+        """
+            Create <pyrogram.Client> client object with current session data
+                using in_memory session storoge
+        """
+        th_client = self.make_telethon()
+        if not th_client:
+            return
+        async with th_client:
+            user_data = await th_client.get_me()
 
-    def make_telethon_session_file(self, id_or_path: str = "telethon") -> bool:
+        pyrogram_string_session = base64.urlsafe_b64encode(
+            struct.pack(
+                Storage.SESSION_STRING_FORMAT,
+                self._dc_id,
+                self.api_id,
+                False,
+                self._auth_key,
+                int(user_data.id or 999999999),
+                0
+            )
+        ).decode().rstrip("=")
+        client = PyrogramTelegramClient(
+            session_id, session_string=pyrogram_string_session,
+            api_id=self.api_id, api_hash=self.api_hash, **make_args)
+        return client
+
+    def make_sqlite_session_file(
+            self, client_id: str = "telegram",
+            workdir: str = None, pyrogram: bool = False,
+            api_id: int = None, api_hash: str = None) -> bool:
         """ Make telethon sqlite3 session file
                 {id.session} will be created if id_or_path is not the full path to the file
         """
-        session_storage = SQLiteSession(id_or_path)
-        session_storage.set_dc(self._dc_id, self._server_address, self._port)
-        session_storage.auth_key = AuthKey(data=self._auth_key)
-        session_storage._update_session_table()
-        session_storage.save()
+        session_workdir = Path.cwd()
+        if workdir is not None:
+            session_workdir = Path(workdir)
+        session_path = "{}/{}.session".format(session_workdir, client_id)
+        
+        if pyrogram:
+            session_workdir = Path.cwd()
+            if workdir is not None:
+                session_workdir = Path(workdir)
+
+            # Create pyrogram session
+            client = PyrogramTelegramClient(
+                client_id, api_id=api_id or self.api_id, api_hash=api_hash or self.api_hash)
+            client.storoge = FileStorage(client_id, session_workdir)
+            client.storage.conn = sqlite3.Connection(session_path)
+            client.storage.create()
+
+            async def async_wrapper(client):
+                user_id = 999999999
+                th_client = self.make_telethon(sync=False)
+                if th_client:
+                    async with th_client:
+                        user_data = await th_client.get_me()
+                        user_id = user_data.id
+
+                await client.storage.dc_id(self._dc_id)
+                await client.storage.api_id(self.api_id)
+                await client.storage.test_mode(False)
+                await client.storage.auth_key(self._auth_key)
+                await client.storage.user_id(user_id)
+                await client.storage.date(0)
+                await client.storage.is_bot(False)
+                await client.storage.save()
+            
+            self._loop.run_until_complete(async_wrapper(client))
+        else:
+            self._make_telethon_sqlite_session_storoge(session_path, update_table=True, save=True)
         return True
+
+    def make_tdata_folder(self, folder_name: str = "tdata"):
+        pass

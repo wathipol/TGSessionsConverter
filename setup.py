@@ -4,15 +4,14 @@ with open("README.md", "r") as fh:
 
 requirements = [
     "opentele",
+    "tgcrypto==1.2.3",
     "telethon",
-    "pyrogram"
-    "tgcrypto",
+    "pyrogram",
     "stream-sqlite==0.0.38"
-
 ]
 
 setuptools.setup(
-    name="TGSessionsCoverter",
+    name="TGSessionsConverter",
     version="0.0.2",
     author="watdev",
     author_email="v.liubachevskyi@gmail.com",

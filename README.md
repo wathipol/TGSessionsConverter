@@ -5,7 +5,7 @@
 ![PyPI - License](https://img.shields.io/pypi/l/TGSessionsCoverter)
 
 
-This module is small util for converting Telegram sessions  to various formats (Telethon, Pyrogram, Tdata)
+This module is small util for easy converting Telegram sessions  to various formats (Telethon, Pyrogram, Tdata)
 <hr/>
 
 
@@ -53,6 +53,17 @@ session.make_telethon_session_file("telethon.session")
 
 ## Docs
 
+### How it works
+> An authorization session consists of an authorization key and some additional data required to connect. The module simply extracts this data and creates an instance of TelegramSession based on it, the methods of which are convenient to use to convert to the format you need.
+
+
+
+### TelegramSession
+
+...
+
+### Converting to the format whats you need
+
 ...
 
 
@@ -66,3 +77,4 @@ session.make_telethon_session_file("telethon.session")
 - [ ] To pyrogram client object
 - [ ] To pyrogram SQLite session file
 - [ ] To tdata
+- [ ] CLI usage
