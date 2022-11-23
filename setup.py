@@ -3,7 +3,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 requirements = [
-    "opentele",
+    "opentele==1.15.1",
     "tgcrypto==1.2.3",
     "telethon",
     "pyrogram",
@@ -12,7 +12,7 @@ requirements = [
 
 setuptools.setup(
     name="TGSessionsConverter",
-    version="0.0.3",
+    version="0.0.4",
     author="watdev",
     author_email="v.liubachevskyi@gmail.com",
     description="This module is small util for converting Telegram sessions  to various formats (Telethon, Pyrogram, Tdata)",

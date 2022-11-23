@@ -4,6 +4,7 @@ from pyrogram import Client as PyrogramTelegramClient
 from telethon.sessions import MemorySession, SQLiteSession
 from pyrogram.storage import MemoryStorage, FileStorage, Storage
 from telethon.crypto import AuthKey
+from telethon.version import __version__ as telethon_version
 from pathlib import Path
 from stream_sqlite import stream_sqlite
 from typing import Union
@@ -11,10 +12,16 @@ import io
 import asyncio
 import base64
 import struct
+import platform
 import sqlite3
 
 
 class TelegramSession:
+
+    DEFAULT_DEFICE_MODEL: str = "TGS {}".format(platform.uname().machine)
+    DEFAULT_SYSTEM_VERSION: str = platform.uname().release
+    DEFAULT_APP_VERSION: str = telethon_version
+    
     def __init__(self, auth_key: bytes, dc_id, server_address, port, api_id: int, api_hash: str):
         self._auth_key = auth_key
         self._dc_id = dc_id
@@ -22,11 +29,7 @@ class TelegramSession:
         self._port = port
         self._api_id = api_id
         self._api_hash = api_hash
-
-        try:
-            self._loop = asyncio.get_running_loop()
-        except RuntimeError:
-            self._loop = asyncio.get_event_loop()
+        self._loop = self.make_loop()
 
     @property
     def api_id(self):
@@ -48,6 +51,13 @@ class TelegramSession:
     def api_hash(self, value):
         self._api_hash = value
     
+    @staticmethod
+    def make_loop():
+        try:
+            return asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.get_event_loop()
+
     @staticmethod
     def from_sqlite_session_file_stream(
             sqlite_session: io.BytesIO, api_id: int, api_hash: str):
@@ -105,17 +115,51 @@ class TelegramSession:
     def from_telethon_or_pyrogram_client(
             client: Union[
                 AsyncTelethonTelegramClient, SyncTelethonTelegramClient, PyrogramTelegramClient]):
-        if isinstance(client, [AsyncTelethonTelegramClient, SyncTelethonTelegramClient]):
+        if isinstance(client, (AsyncTelethonTelegramClient, SyncTelethonTelegramClient)):
             # is Telethon
-            pass
+            api_hash = str(client.api_hash)
+            if api_hash == str(client.api_id):
+                api_hash = None
+            return TelegramSession(
+                client.session.auth_key.key,
+                client.session.dc_id,
+                client.session.server_address,
+                client.session.port,
+                client.api_id, api_hash
+            )
         elif isinstance(client, PyrogramTelegramClient):
             pass
         else:
             raise TypeError("client must be <telethon.TelegramClient> or <pyrogram.Client> instance")
 
-    @staticmethod
-    def from_tdata(path_to_folder: str):
-        pass
+    @classmethod
+    def from_tdata(
+            cls, path_to_folder: str, api_id: int, api_hash: str,
+            device_model: str = None, system_version: str = None, app_version: str = None):
+        from opentele.td import TDesktop
+        from opentele.api import CreateNewSession, APIData
+        tdesk = TDesktop(path_to_folder)
+        api = APIData(
+            api_id=api_id,
+            api_hash=api_hash,
+            device_model=device_model or cls.DEFAULT_DEFICE_MODEL,
+            system_version=system_version or cls.DEFAULT_SYSTEM_VERSION,
+            app_version=app_version or cls.DEFAULT_APP_VERSION
+        )
+        loop = cls.make_loop()
+
+        async def async_wrapper():
+            client = await tdesk.ToTelethon(None, CreateNewSession, api)
+            await client.connect()
+            session = TelegramSession.from_telethon_or_pyrogram_client(client)
+            session.api_id = api_id
+            session.api_hash = api_hash
+            await client.disconnect()
+            return session
+
+        task = loop.create_task(async_wrapper())
+        session = loop.run_until_complete(task)
+        return session
 
     def _make_telethon_memory_session_storage(self):
         session = MemorySession()
