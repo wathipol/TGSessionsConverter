@@ -9,6 +9,7 @@ from pathlib import Path
 from stream_sqlite import stream_sqlite
 from typing import Union
 import io
+import nest_asyncio
 import asyncio
 import base64
 import struct
@@ -239,6 +240,7 @@ class TelegramSession:
             client = PyrogramTelegramClient(
                 client_id, api_id=api_id or self.api_id, api_hash=api_hash or self.api_hash)
             client.storoge = FileStorage(client_id, session_workdir)
+            print(session_path)
             client.storage.conn = sqlite3.Connection(session_path)
             client.storage.create()
 
@@ -259,7 +261,9 @@ class TelegramSession:
                 await client.storage.is_bot(False)
                 await client.storage.save()
             
+            nest_asyncio.apply(self._loop)
             self._loop.run_until_complete(async_wrapper(client))
+            
         else:
             self._make_telethon_sqlite_session_storoge(session_path, update_table=True, save=True)
         return True
