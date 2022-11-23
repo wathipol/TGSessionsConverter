@@ -71,10 +71,12 @@ session.make_telethon_session_file("telethon.session")
 
 - [x] From telethon\pyrogram SQLite session file
 - [x] From telethon\pyrogram SQLite session stream
-- [ ] From tdata
+- [x] From tdata
 - [x] To telethon client object (Sync\Async)
 - [x] To telethon SQLite session file
-- [ ] To pyrogram client object
+- [x] To pyrogram client object
 - [ ] To pyrogram SQLite session file
 - [ ] To tdata
+- [x] From telethon client object
+- [ ] From pyrogram client object
 - [ ] CLI usage
