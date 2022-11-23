@@ -80,3 +80,4 @@ session.make_telethon_session_file("telethon.session")
 - [x] From telethon client object
 - [ ] From pyrogram client object
 - [ ] CLI usage
+- [ ] Write normal docs
