@@ -22,6 +22,7 @@ class TelegramSession:
     DEFAULT_DEFICE_MODEL: str = "TGS {}".format(platform.uname().machine)
     DEFAULT_SYSTEM_VERSION: str = platform.uname().release
     DEFAULT_APP_VERSION: str = telethon_version
+    USE_NEST_ASYNCIO: bool = False
     
     def __init__(self, auth_key: bytes, dc_id, server_address, port, api_id: int, api_hash: str):
         self._auth_key = auth_key
@@ -148,6 +149,8 @@ class TelegramSession:
             app_version=app_version or cls.DEFAULT_APP_VERSION
         )
         loop = cls.make_loop()
+        if cls.USE_NEST_ASYNCIO:
+            nest_asyncio.apply(self._loop)
 
         async def async_wrapper():
             client = await tdesk.ToTelethon(None, CreateNewSession, api)
@@ -240,7 +243,6 @@ class TelegramSession:
             client = PyrogramTelegramClient(
                 client_id, api_id=api_id or self.api_id, api_hash=api_hash or self.api_hash)
             client.storoge = FileStorage(client_id, session_workdir)
-            print(session_path)
             client.storage.conn = sqlite3.Connection(session_path)
             client.storage.create()
 
@@ -260,8 +262,8 @@ class TelegramSession:
                 await client.storage.date(0)
                 await client.storage.is_bot(False)
                 await client.storage.save()
-            
-            nest_asyncio.apply(self._loop)
+            if self.USE_NEST_ASYNCIO:
+                nest_asyncio.apply(self._loop)
             self._loop.run_until_complete(async_wrapper(client))
             
         else:

@@ -7,7 +7,8 @@ requirements = [
     "tgcrypto==1.2.3",
     "telethon",
     "pyrogram",
-    "stream-sqlite==0.0.38"
+    "stream-sqlite==0.0.38",
+    "nest_asyncio"
 ]
 
 setuptools.setup(
