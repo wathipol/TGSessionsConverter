@@ -225,7 +225,7 @@ class TelegramSession:
     def make_sqlite_session_file(
             self, client_id: str = "telegram",
             workdir: str = None, pyrogram: bool = False,
-            api_id: int = None, api_hash: str = None) -> bool:
+            api_id: int = None, api_hash: str = None, **make_args) -> bool:
         """ Make telethon sqlite3 session file
                 {id.session} will be created if id_or_path is not the full path to the file
         """
@@ -241,14 +241,16 @@ class TelegramSession:
 
             # Create pyrogram session
             client = PyrogramTelegramClient(
-                client_id, api_id=api_id or self.api_id, api_hash=api_hash or self.api_hash)
+                client_id,
+                api_id=api_id or self.api_id,api_hash=api_hash or self.api_hash,
+                **make_args)
             client.storoge = FileStorage(client_id, session_workdir)
             client.storage.conn = sqlite3.Connection(session_path)
             client.storage.create()
 
             async def async_wrapper(client):
                 user_id = 999999999
-                th_client = self.make_telethon(sync=False)
+                th_client = self.make_telethon(sync=False, **make_args)
                 if th_client:
                     async with th_client:
                         user_data = await th_client.get_me()
@@ -271,4 +273,4 @@ class TelegramSession:
         return True
 
     def make_tdata_folder(self, folder_name: str = "tdata"):
-        pass
+        raise NotImplementedError("Method now aviable now or you use old version of libary")
